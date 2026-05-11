@@ -114,6 +114,7 @@ const Index = () => {
           {/* KPI Summary */}
           <DashboardKPI
             portfolioValue={portfolio.totalValue}
+            investedAmount={portfolio.amount}
             dailyGain={portfolio.totalChange}
             riskScore={65}
             isLoading={isLoading}
@@ -227,8 +228,8 @@ const Index = () => {
                   <div className="space-y-4 text-sm">
                     <div>
                       <p className="text-muted-foreground">Total Return</p>
-                      <p className="text-xl font-bold text-primary">
-                        +{portfolio.totalChange.toFixed(2)}%
+                      <p className={`text-xl font-bold ${portfolio.totalChange >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                        {portfolio.totalChange >= 0 ? "+" : ""}{portfolio.totalChange.toFixed(2)}%
                       </p>
                     </div>
                     <div>

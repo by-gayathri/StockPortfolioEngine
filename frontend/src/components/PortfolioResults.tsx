@@ -174,16 +174,20 @@ const PortfolioResults = ({
 								minimumFractionDigits: 2,
 							})}
 						</h2>
-						<div className={`flex items-center gap-2 ${totalChange >= 0 ? "text-emerald-300" : "text-red-300"}`}>
-							{totalChange >= 0 ? (
-								<TrendingUp className="w-6 h-6" />
-							) : (
-								<TrendingDown className="w-6 h-6" />
-							)}
-							<span className="text-2xl font-bold">
-								{totalChange >= 0 ? "+" : ""}
-								{totalChange.toFixed(2)}%
-							</span>
+						{/* Use direct dollar comparison so sub-cent rounding never flips the sign */}
+						<div className={`flex flex-col items-end gap-1 ${totalValue >= amount ? "text-emerald-300" : "text-red-300"}`}>
+							<div className="flex items-center gap-2">
+								{totalValue >= amount ? (
+									<TrendingUp className="w-6 h-6" />
+								) : (
+									<TrendingDown className="w-6 h-6" />
+								)}
+								<span className="text-2xl font-bold">
+									{totalValue > amount ? "+" : totalValue < amount ? "-" : ""}
+									{Math.abs(totalChange).toFixed(2)}%
+								</span>
+							</div>
+							<span className="text-xs text-primary-foreground/60 font-normal">vs. invested amount</span>
 						</div>
 					</div>
 				</div>
@@ -318,24 +322,24 @@ const PortfolioResults = ({
 						</p>
 						<p className="text-xs text-muted-foreground mt-2">Today</p>
 					</div>
-					<div className={`glass-card-subtle p-6 rounded-xl border ${totalChange >= 0 ? "border-emerald-500/30" : "border-red-500/30"}`}>
+					<div className={`glass-card-subtle p-6 rounded-xl border ${totalValue >= amount ? "border-emerald-500/30" : "border-red-500/30"}`}>
 						<p className="text-sm text-muted-foreground mb-2 font-medium">
-							Weekly Return
+							Total Return
 						</p>
 						<p
 							className={`text-3xl font-bold flex items-center gap-2 ${
-								totalChange >= 0
+								totalValue >= amount
 									? "text-emerald-400"
 									: "text-red-400"
 							}`}
 						>
-							{totalChange >= 0 ? (
+							{totalValue >= amount ? (
 								<TrendingUp className="w-6 h-6" />
 							) : (
 								<TrendingDown className="w-6 h-6" />
 							)}
-							{totalChange >= 0 ? "+" : ""}
-							{totalChange.toFixed(2)}%
+							{totalValue > amount ? "+" : totalValue < amount ? "-" : ""}
+							{Math.abs(totalChange).toFixed(2)}%
 						</p>
 					</div>
 				</div>

@@ -2,6 +2,7 @@ import { TrendingUp, TrendingDown, Zap, AlertCircle } from "lucide-react";
 
 interface KPIData {
   portfolioValue?: number;
+  investedAmount?: number; // raw investment; used for sign correctness when % rounds to 0.00
   dailyGain?: number;
   riskScore?: number;
   isLoading?: boolean;
@@ -9,10 +10,25 @@ interface KPIData {
 
 const DashboardKPI = ({
   portfolioValue,
+  investedAmount,
   dailyGain,
   riskScore,
   isLoading,
 }: KPIData) => {
+  // Use direct dollar comparison so sub-cent rounding never flips the sign
+  const isPositiveReturn =
+    investedAmount != null && portfolioValue != null
+      ? portfolioValue > investedAmount
+      : dailyGain != null
+        ? dailyGain > 0
+        : true;
+  const isNegativeReturn =
+    investedAmount != null && portfolioValue != null
+      ? portfolioValue < investedAmount
+      : dailyGain != null
+        ? dailyGain < 0
+        : false;
+  const gainSign = isPositiveReturn ? "+" : isNegativeReturn ? "-" : "";
   const kpis = [
     {
       label: "Portfolio Value",
@@ -23,23 +39,16 @@ const DashboardKPI = ({
       iconColor: "text-emerald-400",
     },
     {
-      label: "Daily Gain/Loss",
-      value: dailyGain
-        ? dailyGain >= 0
-          ? `+${dailyGain.toFixed(2)}%`
-          : `${dailyGain.toFixed(2)}%`
-        : "0%",
-      icon: dailyGain && dailyGain >= 0 ? TrendingUp : TrendingDown,
-      color:
-        dailyGain && dailyGain >= 0
-          ? "from-green-500/20 to-emerald-500/20"
-          : "from-red-500/20 to-pink-500/20",
-      borderColor:
-        dailyGain && dailyGain >= 0
-          ? "border-green-500/30"
-          : "border-red-500/30",
-      iconColor:
-        dailyGain && dailyGain >= 0 ? "text-green-400" : "text-red-400",
+      label: "Total Return",
+      value: dailyGain != null
+        ? `${gainSign}${Math.abs(dailyGain).toFixed(2)}%`
+        : "0.00%",
+      icon: isNegativeReturn ? TrendingDown : TrendingUp,
+      color: isNegativeReturn
+        ? "from-red-500/20 to-pink-500/20"
+        : "from-green-500/20 to-emerald-500/20",
+      borderColor: isNegativeReturn ? "border-red-500/30" : "border-green-500/30",
+      iconColor: isNegativeReturn ? "text-red-400" : "text-green-400",
     },
     {
       label: "Risk Score",

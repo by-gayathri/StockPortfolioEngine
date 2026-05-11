@@ -301,12 +301,61 @@ export function generateMockPortfolio(
 
 export const generatePortfolio = generateMockPortfolio;
 
+// Comprehensive name map covering all backend strategy stocks + common market symbols
+const STOCK_NAME_MAP: Record<string, string> = {
+  // Ethical Investing
+  AAPL: "Apple Inc.",
+  ADBE: "Adobe Inc.",
+  NSRGY: "Nestlé S.A.",
+  CRM: "Salesforce Inc.",
+  // Growth Investing
+  AMZN: "Amazon.com Inc.",
+  TSLA: "Tesla Inc.",
+  GOOGL: "Alphabet Inc.",
+  NVDA: "NVIDIA Corporation",
+  META: "Meta Platforms Inc.",
+  // Index Investing
+  VTI: "Vanguard Total Stock Market ETF",
+  IXUS: "iShares Core MSCI Total Intl Stk",
+  ILTB: "iShares Core 10+ Year USD Bond",
+  VOO: "Vanguard S&P 500 ETF",
+  // Quality Investing
+  MSFT: "Microsoft Corporation",
+  JNJ: "Johnson & Johnson",
+  PG: "Procter & Gamble Co.",
+  V: "Visa Inc.",
+  // Value Investing
+  "BRK-B": "Berkshire Hathaway Inc.",
+  KO: "Coca-Cola Co.",
+  XOM: "Exxon Mobil Corporation",
+  JPM: "JPMorgan Chase & Co.",
+  BAC: "Bank of America Corp.",
+  WMT: "Walmart Inc.",
+  // Other market stocks
+  NFLX: "Netflix Inc.",
+  DIS: "The Walt Disney Co.",
+  CSCO: "Cisco Systems Inc.",
+  PEP: "PepsiCo Inc.",
+  COST: "Costco Wholesale Corp.",
+  MA: "Mastercard Inc.",
+  HD: "The Home Depot Inc.",
+  PYPL: "PayPal Holdings Inc.",
+  INTC: "Intel Corporation",
+  QCOM: "Qualcomm Inc.",
+  T: "AT&T Inc.",
+  NKE: "Nike Inc.",
+  MCD: "McDonald's Corp.",
+};
+
 function getStockName(symbol: string): string {
+  const upper = symbol.toUpperCase();
+  if (STOCK_NAME_MAP[upper]) return STOCK_NAME_MAP[upper];
+  // Fall back to scanning strategyStocks (handles any future additions)
   const allStocks = Object.values(strategyStocks).flat();
   const match = allStocks.find(
     (stock) =>
       stock.symbol.replace(".", "").toUpperCase() ===
-      symbol.replace(".", "").toUpperCase(),
+      upper.replace(".", ""),
   );
   return match?.name ?? symbol;
 }
@@ -540,14 +589,13 @@ function transformBackendPortfolio(
           : fallbackTotal) * 100,
     ) / 100;
 
+  // Compare current portfolio value against the amount invested.
+  // This is the most meaningful metric: positive = portfolio is worth MORE than invested,
+  // negative = portfolio is worth LESS. (Mock portfolio already uses this formula.)
   const totalChange =
-    Math.round(
-      (weeklyTrend.length > 1 && weeklyTrend[0].value !== 0
-        ? ((weeklyTrend[weeklyTrend.length - 1].value - weeklyTrend[0].value) /
-            weeklyTrend[0].value) *
-          100
-        : 0) * 100,
-    ) / 100;
+    amount > 0
+      ? Math.round(((totalValue - amount) / amount) * 100 * 100) / 100
+      : 0;
 
   return {
     stocks,

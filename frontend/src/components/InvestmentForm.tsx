@@ -176,7 +176,7 @@ const InvestmentForm = ({
                   const value = e.target.value.replace(/[^0-9.]/g, "");
                   setAmount(value);
                 }}
-                placeholder="10,000"
+                placeholder="5,000"
                 className="premium-input pl-12 h-16 text-3xl font-bold"
               />
             </div>

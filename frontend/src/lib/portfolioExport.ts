@@ -110,14 +110,14 @@ export function generatePortfolioPDF(data: PortfolioData): void {
     stock.strategy || "-",
     `$${stock.price.toFixed(2)}`,
     stock.shares.toFixed(4),
-    `${stock.allocation.toFixed(1)}%`,
+    `${Math.round(stock.allocation)}%`,
     `$${stock.value.toFixed(2)}`,
     `${stock.change >= 0 ? "+" : ""}${stock.change.toFixed(2)}%`,
   ]);
 
   autoTable(doc, {
     startY: yPos + 8,
-    head: [["Symbol", "Name", "Strategy", "Price", "Shares", "Allocation", "Value", "Change"]],
+    head: [["Symbol", "Name", "Strategy", "Price", "Shares", "Allocation", "Value", "Day Chg%"]],
     body: tableData,
     theme: "striped",
     headStyles: {
@@ -217,7 +217,7 @@ export function generateEmailContent(data: PortfolioData): { subject: string; bo
   const stocksList = stocks
     .map(
       (stock) =>
-        `  • ${stock.symbol} (${stock.name}): $${stock.value.toFixed(2)} (${stock.allocation.toFixed(1)}%)`
+        `  • ${stock.symbol} (${stock.name}): $${stock.value.toFixed(2)} (${Math.round(stock.allocation)}%)`
     )
     .join("\n");
 

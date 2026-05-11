@@ -24,7 +24,7 @@ STRATEGIES = {
 
 
 def fetch_stock_prices(stocks):
-    """Fetch latest prices and intraday change."""
+    """Fetch latest prices and intraday % change."""
     prices = {}
     for stock in stocks:
         ticker = yf.Ticker(stock)
@@ -32,10 +32,11 @@ def fetch_stock_prices(stocks):
         if not info.empty:
             close_price = round(info["Close"].iloc[-1], 2)
             open_price = info["Open"].iloc[-1]
-            change = round(close_price - open_price, 2)
-            prices[stock] = {"price": close_price, "change": change}
+            # Return percentage change so frontend can display it with a "%" suffix
+            change_pct = round((close_price - open_price) / open_price * 100, 2) if open_price > 0 else 0.0
+            prices[stock] = {"price": close_price, "change": change_pct}
         else:
-            prices[stock] = {"price": None, "change": 0}
+            prices[stock] = {"price": None, "change": 0.0}
     return prices
 
 
@@ -208,48 +209,71 @@ def calculate_portfolio_value(investment, stock_allocations, stock_prices):
 
 
 def build_weekly_portfolio_trend(results):
-    """Aggregate weekly trend across all stocks in all strategies."""
-    # All stocks now have the same unified date range
-    # Get dates from the first stock in the first result
-    unified_dates = []
-    if results and results[0]["portfolio"]:
-        first_stock = next(iter(results[0]["portfolio"].values()))
-        unified_dates = first_stock.get("dates", [])
-    
-    if not unified_dates:
+    """Aggregate weekly trend across all stocks in all strategies.
+
+    Uses a date-keyed accumulation so that strategies processed independently
+    (each with their own unified date range) are correctly aligned before summing.
+    """
+    # Collect every distinct date across ALL stocks in ALL strategies
+    all_dates_set: set = set()
+    for result in results:
+        for stock_data in result["portfolio"].values():
+            all_dates_set.update(stock_data.get("dates") or [])
+
+    if not all_dates_set:
         return []
-    
-    # Initialize daily values for each date
-    daily_values = [{"day": date, "value": 0.0} for date in unified_dates]
-    
-    # Aggregate portfolio value for each date
+
+    # Use the 5 most recent trading dates found across all strategies
+    unified_dates = sorted(all_dates_set)[-5:]
+
+    # Accumulate portfolio value per date using a dict (avoids index-mismatch bug)
+    daily_values_map: dict = {date: 0.0 for date in unified_dates}
+
     for result in results:
         for stock_data in result["portfolio"].values():
             dates = stock_data.get("dates") or []
             prices = stock_data.get("prices") or []
             shares = stock_data.get("shares", 0) or 0
-            
-            # Since all stocks have unified dates, dates should match unified_dates
-            for idx, date in enumerate(dates):
-                if idx >= len(daily_values):
-                    break
-                    
-                price = prices[idx] if idx < len(prices) else None
-                if price is not None and price > 0:
-                    daily_values[idx]["value"] += shares * price
-    
-    # Round values and format dates
-    for i in range(len(daily_values)):
-        daily_values[i]["value"] = round(daily_values[i]["value"], 2)
-        
-        # Format date for display (e.g., "Dec 9")
+
+            # Build a {date: price} lookup for this stock
+            price_map = {}
+            for i, date in enumerate(dates):
+                if i < len(prices) and prices[i] is not None and prices[i] > 0:
+                    price_map[date] = prices[i]
+
+            # Forward-fill the price_map to cover all unified_dates:
+            # if a unified date is beyond the stock's last known date, carry forward.
+            last_known_price = None
+            for date in sorted(set(list(price_map.keys()) + unified_dates)):
+                if date in price_map:
+                    last_known_price = price_map[date]
+                elif last_known_price is not None and date in unified_dates:
+                    price_map[date] = last_known_price
+
+            # Add this stock's contribution to each unified date
+            for date in unified_dates:
+                if date in price_map:
+                    daily_values_map[date] += shares * price_map[date]
+
+    # Forward-fill any dates that have no data (e.g. a stock had no price that day)
+    prev_val = 0.0
+    trend = []
+    for date in unified_dates:
+        val = daily_values_map[date]
+        if val == 0.0 and prev_val > 0:
+            val = prev_val
+        else:
+            prev_val = val
+
         try:
-            dt = datetime.strptime(daily_values[i]["day"], "%Y-%m-%d")
-            daily_values[i]["day"] = dt.strftime("%b %d")
+            dt = datetime.strptime(date, "%Y-%m-%d")
+            day_label = dt.strftime("%b %d")
         except (ValueError, TypeError):
-            pass
-    
-    return daily_values
+            day_label = date
+
+        trend.append({"day": day_label, "value": round(val, 2)})
+
+    return trend
 
 
 @app.route("/api/portfolio", methods=["POST"])
