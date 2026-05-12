@@ -49,6 +49,51 @@ Frontend runs at: `http://localhost:8080`
 -   Automatic portfolio allocation
 -   PDF export and email sharing
 
+## Project Demo
+
+Screenshots and demo video will be added soon.
+
+### Sample Input
+
+```json
+{
+  "investmentAmount": 10000,
+  "selectedStrategies": ["Growth", "Dividend"]
+}
+```
+
+### Sample Output
+
+```json
+{
+  "totalInvestment": 10000,
+  "portfolio": [
+    {
+      "symbol": "AAPL",
+      "company": "Apple Inc.",
+      "allocationPercentage": 25,
+      "allocatedAmount": 2500
+    },
+    {
+      "symbol": "MSFT",
+      "company": "Microsoft Corporation",
+      "allocationPercentage": 25,
+      "allocatedAmount": 2500
+    }
+  ]
+}
+```
+
+### Demo Flow
+
+1. User enters investment amount.
+2. User selects one or more investment strategies.
+3. System validates the input.
+4. Backend fetches real-time stock data.
+5. Portfolio engine generates stock allocation.
+6. User views recommended portfolio and weekly trend chart.
+7. User can export the portfolio as PDF or share it by email.
+
 ## Project Structure
 
 ```
