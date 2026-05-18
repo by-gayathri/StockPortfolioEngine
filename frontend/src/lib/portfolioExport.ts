@@ -19,42 +19,52 @@ interface PortfolioData {
   totalValue: number;
   totalChange: number;
   weeklyTrend: { day: string; value: number }[];
+  userName?: string;
 }
 
 export function generatePortfolioPDF(data: PortfolioData): void {
-  const { amount, strategies, stocks, totalValue, totalChange, weeklyTrend } = data;
+  const { amount, strategies, stocks, totalValue, totalChange, weeklyTrend, userName } = data;
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
-  
+
   // Title
   doc.setFontSize(24);
   doc.setTextColor(59, 130, 246); // Blue color
   doc.text("Portfolio Report", pageWidth / 2, 20, { align: "center" });
-  
-  // Date
+
+  // Owner line — show if a name is set
+  const ownerLabel = userName && userName !== "Investor"
+    ? `Prepared for: ${userName}`
+    : "Stock Portfolio Engine";
+
+  // Date + owner
   doc.setFontSize(10);
   doc.setTextColor(100, 100, 100);
-  doc.text(`Generated on: ${new Date().toLocaleDateString("en-US", { 
-    weekday: 'long', 
-    year: 'numeric', 
-    month: 'long', 
-    day: 'numeric' 
+  doc.text(`Generated on: ${new Date().toLocaleDateString("en-US", {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
   })}`, pageWidth / 2, 28, { align: "center" });
+
+  doc.setFontSize(9);
+  doc.setTextColor(130, 130, 130);
+  doc.text(ownerLabel, pageWidth / 2, 35, { align: "center" });
 
   // Summary Section
   doc.setFontSize(14);
   doc.setTextColor(30, 30, 30);
-  doc.text("Portfolio Summary", 14, 42);
-  
+  doc.text("Portfolio Summary", 14, 48);
+
   doc.setDrawColor(59, 130, 246);
   doc.setLineWidth(0.5);
-  doc.line(14, 45, pageWidth - 14, 45);
+  doc.line(14, 51, pageWidth - 14, 51);
 
   // Summary boxes
   doc.setFontSize(11);
   doc.setTextColor(80, 80, 80);
   
-  const summaryY = 55;
+  const summaryY = 61;
   doc.text("Initial Investment:", 14, summaryY);
   doc.setTextColor(30, 30, 30);
   doc.setFont(undefined, "bold");
@@ -196,8 +206,9 @@ export function generatePortfolioPDF(data: PortfolioData): void {
     doc.setPage(i);
     doc.setFontSize(8);
     doc.setTextColor(150, 150, 150);
+    const footerOwner = userName && userName !== "Investor" ? ` | ${userName}` : "";
     doc.text(
-      `Page ${i} of ${pageCount} | Smart Portfolio Builder | Generated ${new Date().toLocaleDateString()}`,
+      `Page ${i} of ${pageCount} | Portfolio Engine${footerOwner} | Generated ${new Date().toLocaleDateString()}`,
       pageWidth / 2,
       doc.internal.pageSize.getHeight() - 10,
       { align: "center" }
@@ -210,9 +221,9 @@ export function generatePortfolioPDF(data: PortfolioData): void {
 }
 
 export function generateEmailContent(data: PortfolioData): { subject: string; body: string } {
-  const { amount, strategies, stocks, totalValue, totalChange } = data;
-  
-  const subject = `My Investment Portfolio Report - ${new Date().toLocaleDateString()}`;
+  const { amount, strategies, stocks, totalValue, totalChange, userName } = data;
+  const ownerPrefix = userName && userName !== "Investor" ? `${userName}'s ` : "My ";
+  const subject = `${ownerPrefix}Investment Portfolio Report - ${new Date().toLocaleDateString()}`;
   
   const stocksList = stocks
     .map(

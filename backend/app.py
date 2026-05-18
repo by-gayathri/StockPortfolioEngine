@@ -191,7 +191,8 @@ def calculate_portfolio_value(investment, stock_allocations, stock_prices):
         shares = round(allocation / price, 2)
         trends = trends_with_dates[stock]
         graph_json = generate_plotly_graph(stock, trends)
-        stock_value = round(shares * price, 2)
+        # Use allocation as the stock value (this maintains the total investment)
+        stock_value = allocation
 
         portfolio[stock] = {
             "allocation": allocation,

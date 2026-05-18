@@ -51,6 +51,7 @@ interface PortfolioResultsProps {
 	weeklyTrend: { day: string; value: number }[];
 	totalValue: number;
 	totalChange: number;
+	userName?: string;
 }
 
 const PortfolioResults = ({
@@ -60,6 +61,7 @@ const PortfolioResults = ({
 	weeklyTrend,
 	totalValue,
 	totalChange,
+	userName,
 }: PortfolioResultsProps) => {
 	const { toast } = useToast();
 	const [isExporting, setIsExporting] = useState(false);
@@ -78,6 +80,7 @@ const PortfolioResults = ({
 		totalValue,
 		totalChange,
 		weeklyTrend,
+		userName,
 	};
 
 	const handleDownloadPDF = () => {
