@@ -19,7 +19,7 @@ import DashboardKPI from "@/components/DashboardKPI";
 import Recommendations from "@/components/Recommendations";
 import PortfolioAnalytics from "@/components/PortfolioAnalytics";
 import WelcomeModal from "@/components/WelcomeModal";
-import { fetchPortfolio, generateMockPortfolio } from "@/lib/portfolioData";
+import { fetchPortfolio, generateMockPortfolio, refreshPortfolioPrices } from "@/lib/portfolioData";
 import { toast } from "@/hooks/use-toast";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -35,6 +35,23 @@ type PortfolioEntry = {
 };
 
 const MAX_HISTORY = 5;
+
+// ─── Risk Score ───────────────────────────────────────────────────────────────
+// Risk is assessed per strategy based on volatility profile and asset class.
+// Index (diversified ETFs + bonds) = lowest; Growth (TSLA/AMZN) = highest.
+const STRATEGY_RISK: Record<string, number> = {
+  "Index Investing":   22, // VTI + IXUS + ILTB — broad market + bonds, lowest volatility
+  "Quality Investing": 38, // JNJ + MSFT + V — stable blue-chips, low beta
+  "Value Investing":   48, // BRK-B + KO + XOM — established, some cyclical exposure
+  "Ethical Investing": 58, // AAPL + ADBE + NSRGY — tech-heavy, moderate concentration risk
+  "Growth Investing":  82, // AMZN + TSLA + GOOGL — high beta, max volatility
+};
+
+function calculateRiskScore(strategies: string[]): number {
+  if (!strategies.length) return 50;
+  const scores = strategies.map((s) => STRATEGY_RISK[s] ?? 55);
+  return Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+}
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -88,6 +105,10 @@ const Index = () => {
   // Whether the "Create Portfolio" form is shown in the portfolio section
   const [showCreateForm, setShowCreateForm] = useState(false);
 
+  // ── Live price refresh state ──────────────────────────────────────────────
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
+
   // ── Persist history to localStorage on every change ───────────────────────
   useEffect(() => {
     localStorage.setItem("portfolioHistory", JSON.stringify(portfolioHistory));
@@ -99,6 +120,95 @@ const Index = () => {
       localStorage.setItem("currentPortfolio", JSON.stringify(portfolio));
     }
   }, [portfolio]);
+
+  // ── Refresh portfolio with latest stock prices ──────────────────────────
+  const refreshPortfolioValues = async (
+    silent = false,
+    snapshot?: PortfolioEntry,
+  ) => {
+    const sourcePortfolio = snapshot ?? portfolio;
+    if (!sourcePortfolio || isRefreshing) return;
+
+    setIsRefreshing(true);
+
+    try {
+      const refreshedHoldings = await refreshPortfolioPrices(
+        sourcePortfolio.stocks.map((stock) => ({
+          symbol: stock.symbol,
+          shares: stock.shares,
+        })),
+      );
+
+      const refreshedBySymbol = new Map(
+        refreshedHoldings.map((holding) => [holding.symbol, holding]),
+      );
+
+      const updatedStocks = sourcePortfolio.stocks.map((stock) => {
+        const fresh = refreshedBySymbol.get(stock.symbol);
+        if (!fresh) return stock;
+
+        return {
+          ...stock,
+          price: fresh.price,
+          value: fresh.value,
+          change: fresh.change,
+        };
+      });
+
+      const totalValue =
+        Math.round(
+          updatedStocks.reduce((sum, stock) => sum + (stock.value ?? 0), 0) * 100,
+        ) / 100;
+
+      const totalChange =
+        sourcePortfolio.amount > 0
+          ? Math.round(((totalValue - sourcePortfolio.amount) / sourcePortfolio.amount) * 100 * 100) /
+            100
+          : 0;
+
+      const updatedPortfolio: PortfolioEntry = {
+        ...sourcePortfolio,
+        stocks: updatedStocks,
+        totalValue,
+        totalChange,
+      };
+
+      setPortfolio(updatedPortfolio);
+      setLastRefreshed(new Date());
+
+      if (!silent) {
+        toast({
+          title: "Portfolio Updated",
+          description: "Latest stock prices loaded.",
+        });
+      }
+    } catch (error) {
+      console.error("Failed to refresh portfolio:", error);
+      if (!silent) {
+        toast({
+          title: "Refresh Failed",
+          description:
+            "Could not reach the backend. Showing the last known prices.",
+          variant: "destructive",
+        });
+      }
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  // ── Auto-refresh when dashboard portfolio is active ──────────────────────
+  useEffect(() => {
+    if (currentSection !== "dashboard" || !portfolio) return;
+
+    void refreshPortfolioValues(true, portfolio);
+
+    const interval = setInterval(() => {
+      void refreshPortfolioValues(true, portfolio);
+    }, 60_000);
+
+    return () => clearInterval(interval);
+  }, [currentSection, portfolio?.createdAt]);
 
   // ── Identity helpers ──────────────────────────────────────────────────────
   const handleSetUserName = (name: string) => {
@@ -242,20 +352,40 @@ const Index = () => {
         <div className="relative z-10">
           <div className="flex items-start justify-between mb-4">
             <div>
+              {/* Personalized greeting chip — only when name is set */}
+              {userName && (
+                <div className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 bg-primary/10 border border-primary/20 text-sm text-primary font-medium mb-4 fade-in-up">
+                  <span>👋</span>
+                  <span>Hello, {userName.split(" ")[0]}</span>
+                </div>
+              )}
               <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-3 fade-in-up">
-                {userName ? `Welcome, ${userName.split(" ")[0]}` : "Welcome to"}{" "}
-                <span className="gradient-text">
-                  {userName ? "Portfolio Engine" : "Portfolio Engine"}
-                </span>
+                Welcome to{" "}
+                <span className="gradient-text">Portfolio Engine</span>
               </h1>
               <p className="text-lg text-muted-foreground max-w-2xl fade-in-up stagger-1">
-                AI-powered investment strategies tailored to your financial goals
+                {portfolio
+                  ? `${portfolio.strategies.join(" + ")} · ${portfolio.stocks.length} holdings`
+                  : "AI-powered investment strategies tailored to your financial goals"}
               </p>
             </div>
 
             {/* Action buttons shown when a portfolio exists */}
             {portfolio && (
               <div className="flex items-center gap-3 flex-shrink-0">
+                <Button
+                  onClick={() => void refreshPortfolioValues(false)}
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  disabled={isRefreshing}
+                  title="Refresh portfolio with latest stock prices"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  <span className="hidden sm:inline">
+                    {isRefreshing ? "Refreshing..." : "Refresh"}
+                  </span>
+                </Button>
                 {portfolioHistory.length > 0 && (
                   <Button
                     onClick={() => {
@@ -295,7 +425,7 @@ const Index = () => {
             portfolioValue={portfolio.totalValue}
             investedAmount={portfolio.amount}
             dailyGain={portfolio.totalChange}
-            riskScore={65}
+            riskScore={calculateRiskScore(portfolio.strategies)}
             isLoading={isLoading}
           />
 
@@ -385,7 +515,7 @@ const Index = () => {
                     portfolioValue={portfolio.totalValue}
                     investedAmount={portfolio.amount}
                     dailyGain={portfolio.totalChange}
-                    riskScore={65}
+                    riskScore={calculateRiskScore(portfolio.strategies)}
                     isLoading={isLoading}
                   />
 

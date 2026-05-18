@@ -193,6 +193,19 @@ export async function fetchMarketTicker(): Promise<
   });
 }
 
+export async function refreshPortfolioPrices(
+  holdings: { symbol: string; shares: number }[],
+): Promise<{ symbol: string; price: number; change: number; value: number }[]> {
+  const response = await fetch(`${API_BASE_URL}/api/refresh-prices`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ holdings }),
+  });
+  if (!response.ok) throw new Error(`Refresh failed: ${response.statusText}`);
+  const data = await response.json();
+  return data.holdings as { symbol: string; price: number; change: number; value: number }[];
+}
+
 export function generateMockPortfolio(
   amount: number,
   strategies: string[],

@@ -144,6 +144,10 @@ const PortfolioResults = ({
 		return collection.reduce((sum, stock) => sum + (stock.value ?? 0), 0);
 	});
 
+	// Chart color follows portfolio direction — green if up, red if down
+	const isUp = totalValue > amount;
+	const chartColor = isUp ? "hsl(142, 76%, 36%)" : "hsl(0, 84%, 60%)";
+
 	// Calculate Y-axis domain and ticks for the chart
 	const chartValues = weeklyTrend.map((t) => t.value);
 	const minValue = Math.min(...chartValues);
@@ -178,13 +182,13 @@ const PortfolioResults = ({
 							})}
 						</h2>
 						{/* Use direct dollar comparison so sub-cent rounding never flips the sign */}
-						<div className={`flex flex-col items-end gap-1 ${totalValue >= amount ? "text-emerald-300" : "text-red-300"}`}>
+						<div className={`flex flex-col items-end gap-1 ${totalValue > amount ? "text-emerald-300" : totalValue < amount ? "text-red-300" : "text-primary-foreground/60"}`}>
 							<div className="flex items-center gap-2">
-								{totalValue >= amount ? (
+								{totalValue > amount ? (
 									<TrendingUp className="w-6 h-6" />
-								) : (
+								) : totalValue < amount ? (
 									<TrendingDown className="w-6 h-6" />
-								)}
+								) : null}
 								<span className="text-2xl font-bold">
 									{totalValue > amount ? "+" : totalValue < amount ? "-" : ""}
 									{Math.abs(totalChange).toFixed(2)}%
@@ -325,22 +329,24 @@ const PortfolioResults = ({
 						</p>
 						<p className="text-xs text-muted-foreground mt-2">Today</p>
 					</div>
-					<div className={`glass-card-subtle p-6 rounded-xl border ${totalValue >= amount ? "border-emerald-500/30" : "border-red-500/30"}`}>
+					<div className={`glass-card-subtle p-6 rounded-xl border ${totalValue > amount ? "border-emerald-500/30" : totalValue < amount ? "border-red-500/30" : "border-white/10"}`}>
 						<p className="text-sm text-muted-foreground mb-2 font-medium">
 							Total Return
 						</p>
 						<p
 							className={`text-3xl font-bold flex items-center gap-2 ${
-								totalValue >= amount
+								totalValue > amount
 									? "text-emerald-400"
-									: "text-red-400"
+									: totalValue < amount
+									? "text-red-400"
+									: "text-muted-foreground"
 							}`}
 						>
-							{totalValue >= amount ? (
+							{totalValue > amount ? (
 								<TrendingUp className="w-6 h-6" />
-							) : (
+							) : totalValue < amount ? (
 								<TrendingDown className="w-6 h-6" />
-							)}
+							) : null}
 							{totalValue > amount ? "+" : totalValue < amount ? "-" : ""}
 							{Math.abs(totalChange).toFixed(2)}%
 						</p>
@@ -361,12 +367,12 @@ const PortfolioResults = ({
 								>
 									<stop
 										offset="5%"
-										stopColor="hsl(142, 76%, 36%)"
+										stopColor={chartColor}
 										stopOpacity={0.4}
 									/>
 									<stop
 										offset="95%"
-										stopColor="hsl(142, 76%, 36%)"
+										stopColor={chartColor}
 										stopOpacity={0}
 									/>
 								</linearGradient>
@@ -412,7 +418,7 @@ const PortfolioResults = ({
 							<Area
 								type="monotone"
 								dataKey="value"
-								stroke="hsl(142, 76%, 36%)"
+								stroke={chartColor}
 								strokeWidth={3}
 								fill="url(#colorValue)"
 								isAnimationActive

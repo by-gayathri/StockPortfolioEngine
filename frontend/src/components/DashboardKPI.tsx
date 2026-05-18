@@ -1,4 +1,4 @@
-import { TrendingUp, TrendingDown, Zap, AlertCircle } from "lucide-react";
+import { TrendingUp, TrendingDown, Zap, ShieldAlert } from "lucide-react";
 
 interface KPIData {
   portfolioValue?: number;
@@ -6,6 +6,44 @@ interface KPIData {
   dailyGain?: number;
   riskScore?: number;
   isLoading?: boolean;
+}
+
+// Risk band helpers
+function getRiskLabel(score: number): string {
+  if (score < 36) return "Low Risk";
+  if (score < 56) return "Moderate";
+  if (score < 75) return "High Risk";
+  return "Very High";
+}
+
+function getRiskColors(score: number) {
+  if (score < 36)
+    return {
+      color: "from-emerald-500/20 to-teal-500/20",
+      borderColor: "border-emerald-500/30",
+      iconColor: "text-emerald-400",
+      badgeColor: "bg-emerald-500/10 text-emerald-400",
+    };
+  if (score < 56)
+    return {
+      color: "from-yellow-500/20 to-amber-500/20",
+      borderColor: "border-yellow-500/30",
+      iconColor: "text-yellow-400",
+      badgeColor: "bg-yellow-500/10 text-yellow-400",
+    };
+  if (score < 75)
+    return {
+      color: "from-orange-500/20 to-amber-500/20",
+      borderColor: "border-orange-500/30",
+      iconColor: "text-orange-400",
+      badgeColor: "bg-orange-500/10 text-orange-400",
+    };
+  return {
+    color: "from-red-500/20 to-pink-500/20",
+    borderColor: "border-red-500/30",
+    iconColor: "text-red-400",
+    badgeColor: "bg-red-500/10 text-red-400",
+  };
 }
 
 const DashboardKPI = ({
@@ -29,10 +67,21 @@ const DashboardKPI = ({
         ? dailyGain < 0
         : false;
   const gainSign = isPositiveReturn ? "+" : isNegativeReturn ? "-" : "";
+
+  const riskNum = riskScore ?? 50;
+  const riskColors = getRiskColors(riskNum);
+  const riskLabel = getRiskLabel(riskNum);
+
   const kpis = [
     {
       label: "Portfolio Value",
-      value: portfolioValue ? `$${portfolioValue.toLocaleString()}` : "$0",
+      // Show full precision so $9,998.94 is never rounded up to $9,999
+      value: portfolioValue != null
+        ? `$${portfolioValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+        : "$0.00",
+      sub: investedAmount != null
+        ? `Invested $${investedAmount.toLocaleString()}`
+        : "Current market value",
       icon: TrendingUp,
       color: "from-emerald-500/20 to-teal-500/20",
       borderColor: "border-emerald-500/30",
@@ -43,6 +92,7 @@ const DashboardKPI = ({
       value: dailyGain != null
         ? `${gainSign}${Math.abs(dailyGain).toFixed(2)}%`
         : "0.00%",
+      sub: isPositiveReturn ? "Portfolio is up" : isNegativeReturn ? "Portfolio is down" : "No change",
       icon: isNegativeReturn ? TrendingDown : TrendingUp,
       color: isNegativeReturn
         ? "from-red-500/20 to-pink-500/20"
@@ -52,15 +102,15 @@ const DashboardKPI = ({
     },
     {
       label: "Risk Score",
-      value: riskScore !== undefined ? riskScore : "N/A",
-      icon: AlertCircle,
-      color: "from-orange-500/20 to-amber-500/20",
-      borderColor: "border-orange-500/30",
-      iconColor: "text-orange-400",
+      value: `${riskNum} / 100`,
+      sub: riskLabel,
+      icon: ShieldAlert,
+      ...riskColors,
     },
     {
       label: "Status",
       value: "Active",
+      sub: "Portfolio is live",
       icon: Zap,
       color: "from-purple-500/20 to-indigo-500/20",
       borderColor: "border-purple-500/30",
@@ -86,9 +136,16 @@ const DashboardKPI = ({
                 {isLoading ? (
                   <div className="h-8 bg-white/5 rounded animate-pulse mb-1" />
                 ) : (
-                  <p className="text-2xl font-bold text-foreground">
-                    {kpi.value}
-                  </p>
+                  <>
+                    <p className="text-2xl font-bold text-foreground">
+                      {kpi.value}
+                    </p>
+                    {"sub" in kpi && kpi.sub && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {kpi.sub}
+                      </p>
+                    )}
+                  </>
                 )}
               </div>
               <div className={`icon-bg bg-white/5 ${kpi.iconColor} rounded-lg`}>
