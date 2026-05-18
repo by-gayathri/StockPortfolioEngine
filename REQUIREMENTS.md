@@ -2,16 +2,23 @@
 
 ## Functional Requirements
 
-1. The system shall allow users to enter an investment amount.
-2. The system shall validate the minimum investment amount.
-3. The system shall allow users to select one or more investment strategies.
-4. The system shall fetch real-time stock prices using Yahoo Finance.
-5. The system shall generate portfolio allocation based on selected strategies.
-6. The system shall display recommended stocks with allocation percentages.
-7. The system shall show weekly stock trend charts.
-8. The system shall automatically allocate the investment amount across selected stocks.
-9. The system shall allow users to export the generated portfolio as a PDF.
-10. The system shall allow users to share the portfolio through email.
+## Strategy Mapping Requirements
+
+1. The system shall allow the user to select one or two investment strategies.
+2. The system shall support the following investment strategies:
+   - Ethical Investing
+   - Growth Investing
+   - Index Investing
+   - Quality Investing
+   - Value Investing
+3. Each investment strategy shall map to at least three different stocks or ETFs.
+4. The Index Investing strategy shall include ETFs such as VTI, IXUS, and ILTB.
+5. The Ethical Investing strategy shall include stocks such as AAPL, ADBE, and NSRGY.
+6. The system shall divide the investment amount across the selected stocks or ETFs.
+7. The system shall display the current price, number of shares, allocation percentage, and value for each selected stock or ETF.
+8. The system shall calculate the total current portfolio value using live market data.
+9. The system shall display a 5-day weekly trend of the overall portfolio value.
+10. The system shall allow the user to download a PDF report containing portfolio summary, holdings, allocation, and weekly performance trend.
 
 ## Non-Functional Requirements
 
