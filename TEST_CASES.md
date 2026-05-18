@@ -47,204 +47,211 @@ Open **http://localhost:8080** in a browser. Both servers must be running for li
 
 ## Test Case 1 — Minimum Investment Validation (Below $5,000)
 
-**Purpose:** Verify the system rejects investments below the $5,000 minimum at the frontend layer.
+**Purpose:** Verify the system rejects investments below the $5,000 minimum.
 
 **Steps:**
-1. Navigate to http://localhost:8080
-2. Click **"Create Portfolio"** or go to the **Portfolio** tab.
+1. Navigate to http://localhost:8080.
+2. Click **"Create Portfolio"** (the button in the center of the page).
 3. In the "How much do you want to invest?" field, type `3000`.
 4. Click **"Continue"**.
 
 **Expected Result:**
-- A red toast notification appears reading **"Invalid Amount — Please enter a minimum investment of $5,000."**
+- A red toast notification appears at the top of the screen: **"Invalid Amount — Please enter a minimum investment of $5,000."**
 - The user remains on Step 1; the form does **not** advance to Step 2.
-- The input field retains the value `3000`.
+- The input field still shows `3000`.
 
 ---
 
 ## Test Case 2 — Minimum Investment Validation (Exactly $5,000)
 
-**Purpose:** Verify that exactly $5,000 is accepted as the boundary value and the portfolio generates correctly.
+**Purpose:** Verify that exactly $5,000 is accepted as a valid investment and the portfolio generates correctly.
 
 **Steps:**
-1. Navigate to http://localhost:8080 → Portfolio tab.
-2. In the investment field, type `5000`.
-3. Observe the hint text below the input.
+1. Navigate to http://localhost:8080 and click **"Create Portfolio"**.
+2. Type `5000` in the investment field.
+3. Observe the hint text that appears below the input.
 4. Click **"Continue"**.
-5. Select any strategy (e.g., **"Index Investing"**) → click **Continue**.
-6. Keep default allocation settings → click **"Generate Portfolio"**.
-7. Wait for results to load.
+5. Select any strategy (e.g., **"Index Investing"**) → click **"Continue"**.
+6. Leave allocation settings at default → click **"Generate Portfolio"**.
+7. Wait for the results to load.
 
 **Expected Result:**
-- As soon as any number is typed, a green hint `✓ Valid amount: $X,XXX` appears below the input (this appears for any non-empty value and is informational only — the true validation fires on clicking Continue).
-- Clicking Continue with `5000` advances the form to **Step 2 — Choose Your Strategies** without showing an error toast.
-- After generating the portfolio, the **Total Portfolio Value** banner shows a value close to (but potentially a few cents below) **$5,000** due to share-rounding — this is correct behavior.
-- The **Total Return** indicator correctly reflects whether the current value is above or below the invested $5,000 (red `-0.00%` is expected for the rounding difference; it will **not** show green `+0.00%`).
+- A green hint `✓ Valid amount: $5,000` appears below the input (informational only).
+- Clicking Continue with `5000` advances to **Step 2** without an error.
+- After generating, the **Total Portfolio Value** banner shows a value very close to (but possibly a few cents below) **$5,000** — this is correct behavior due to share rounding.
+- The **Total Return** badge shows **red** `-0.00%` (not green), because the current value is slightly below the $5,000 invested.
 
 ---
 
 ## Test Case 3 — Single Strategy Selection (Ethical Investing)
 
-**Purpose:** Verify a single strategy generates a portfolio with the correct stocks.
+**Purpose:** Verify a single strategy generates a portfolio with the correct stocks and displays live prices.
 
 **Steps:**
-1. Enter `10000` in the investment field → click **Continue**.
-2. On Step 2, click the **"Ethical Investing"** card (it should highlight with a colored border).
-3. Click **Continue**.
-4. On Step 3, leave allocation at **"Equal Split" / "Predefined"** → click **"Generate Portfolio"**.
+1. Click **"Create Portfolio"** → enter `10000` → click **"Continue"**.
+2. Click the **"Ethical Investing"** card (it highlights with a colored border when selected).
+3. Click **"Continue"**.
+4. Leave allocation at default → click **"Generate Portfolio"**.
 5. Wait for results to load.
 
 **Expected Result:**
-- Portfolio results appear showing **3 stocks**: AAPL (Apple Inc.), ADBE (Adobe Inc.), NSRGY (Nestlé S.A.)
-- Each stock card shows: current live price, number of shares, allocation %, and a 5-day price trend chart.
-- The **Total Portfolio Value** banner at the top shows a dollar value close to $10,000.
-- Scrolling down to **Portfolio Summary → Historical performance** shows an area chart with **5 data points** (one per trading day).
+- Portfolio results appear showing exactly **3 stock cards**: AAPL (Apple Inc.), ADBE (Adobe Inc.), NSRGY (Nestlé S.A.).
+- Each card shows the current live price, number of shares purchased, allocation %, position value, and a 5-day mini price chart.
+- The **Total Portfolio Value** at the top is close to $10,000.
+- Clicking any stock symbol (e.g., **AAPL ↗**) opens that stock's Yahoo Finance page in a new browser tab.
+- Scrolling down shows a **"Historical performance"** area chart with **5 data points** (one per trading day).
 
 ---
 
 ## Test Case 4 — Single Strategy Selection (Index Investing)
 
-**Purpose:** Verify Index Investing maps to the correct ETFs as specified in the project requirements.
+**Purpose:** Verify Index Investing maps to the correct ETFs and distributes the investment evenly.
 
 **Steps:**
-1. Enter `20000` in the investment field → click **Continue**.
-2. Select **"Index Investing"** → click **Continue**.
+1. Click **"Create Portfolio"** → enter `20000` → click **"Continue"**.
+2. Select **"Index Investing"** → click **"Continue"**.
 3. Keep default allocation settings → click **"Generate Portfolio"**.
 
 **Expected Result:**
-- Exactly **3 ETFs** are shown: **VTI** (Vanguard Total Stock Market ETF), **IXUS** (iShares Core MSCI Total Intl Stk), **ILTB** (iShares Core 10+ Year USD Bond).
-- Each card displays the live ETF price and a within-strategy allocation of approximately **34%, 33%, 33%**.
-- The investment of $20,000 is distributed: ~$6,800 to VTI, ~$6,600 to IXUS, ~$6,600 to ILTB.
+- Exactly **3 ETF cards** are shown: **VTI** (Vanguard Total Stock Market ETF), **IXUS** (iShares Core MSCI Total Intl Stk), **ILTB** (iShares Core 10+ Year USD Bond).
+- Each ETF receives approximately **33% of $20,000** (~$6,667 each).
+- The investment of $20,000 is fully distributed — no unallocated amount remains.
 
 ---
 
-## Test Case 5 — Two Strategies (Equal Split)
+## Test Case 5 — Two Strategies with Equal Split
 
-**Purpose:** Verify that selecting two strategies with equal split divides the investment exactly 50/50.
+**Purpose:** Verify that selecting two strategies divides the investment exactly 50/50, and that the Total Return sign is correct.
 
 **Steps:**
-1. Enter `10000` → click **Continue**.
-2. Select **"Growth Investing"** and **"Value Investing"** (both should highlight with colored borders).
-3. Attempt to click a third strategy — verify a toast appears.
-4. Click **Continue**.
-5. On Step 3, select **"Equal Split"** for strategy distribution → click **"Generate Portfolio"**.
+1. Click **"Create Portfolio"** → enter `10000` → click **"Continue"**.
+2. Click **"Growth Investing"** (1 of 2 selected).
+3. Click **"Value Investing"** (2 of 2 selected — both cards now highlighted).
+4. Try clicking a third strategy card (e.g., "Ethical Investing").
+5. Click **"Continue"**.
+6. On Step 3, select **"Equal Split"** → click **"Generate Portfolio"**.
 
 **Expected Result:**
-- Two strategy sections appear in the results.
-- **Growth Investing** section shows AMZN, TSLA, GOOGL with a combined allocation of **$5,000 (50%)**.
-- **Value Investing** section shows BRK-B, KO, XOM with a combined allocation of **$5,000 (50%)**.
-- The KPI banner shows **Total Portfolio Value** combining all 6 stocks.
-- The **Total Return** indicator shows green `+X.XX%` or red `-X.XX%` depending on current market prices vs. invested $10,000.
+- Clicking the third strategy shows a red toast: **"Strategy Limit Reached — You can select a maximum of 2 strategies."**
+- After generating, two sections appear in results: Growth Investing and Value Investing.
+- **Growth Investing** stocks (AMZN, TSLA, GOOGL) have a combined allocation of exactly **$5,000 (50%)**.
+- **Value Investing** stocks (BRK-B, KO, XOM) have a combined allocation of exactly **$5,000 (50%)**.
+- The **Total Return** badge shows **green** if the current portfolio value exceeds $10,000, and **red** if it is below — reflecting actual market performance, not a rounded percentage quirk.
 
 ---
 
-## Test Case 6 — Two Strategies (Random Split)
+## Test Case 6 — Two Strategies with Random Split
 
-**Purpose:** Verify that "Random Split" distributes the investment unevenly between two strategies, and that the split varies between runs.
+**Purpose:** Verify that "Random Split" distributes the investment unevenly between strategies, and the total always equals the full investment.
 
 **Steps:**
-1. Enter `10000` → click **Continue**.
-2. Select **"Quality Investing"** and **"Ethical Investing"** → click **Continue**.
-3. On Step 3, select **"Random Split"** for strategy distribution → keep stock allocation as "Predefined" → click **"Generate Portfolio"**.
-4. Note the strategy allocation amounts shown in the results.
+1. Click **"Create Portfolio"** → enter `10000` → click **"Continue"**.
+2. Select **"Quality Investing"** and **"Ethical Investing"** → click **"Continue"**.
+3. On Step 3, select **"Random Split"** → click **"Generate Portfolio"**.
+4. Note the dollar amounts shown for each strategy in the results.
 5. Click **"New Portfolio"** and repeat steps 1–4.
 
 **Expected Result:**
-- Each run produces **different percentage splits** between the two strategies (e.g., 62%/38% one run, 44%/56% another).
+- Each run produces a **different split** between the two strategies (e.g., 62%/38% one time, 45%/55% another).
 - The **sum of both strategy allocations always equals exactly $10,000** — no money is lost or created.
+- The stocks shown for each strategy are the correct ones (Quality: JNJ, MSFT, V — Ethical: AAPL, ADBE, NSRGY).
 
 ---
 
-## Test Case 7 — Live Real-Time Stock Prices
+## Test Case 7 — Portfolio History (Save and Reload)
 
-**Purpose:** Verify that current prices are fetched live from Yahoo Finance (not static mock data).
-
-**Pre-condition:** Backend must be running with internet access.
+**Purpose:** Verify that previous portfolios are automatically saved and can be reloaded without losing data.
 
 **Steps:**
-1. Generate any portfolio (e.g., $10,000, Growth Investing, default settings).
-2. On each **StockCard**, note the price displayed for AMZN, TSLA, and GOOGL.
-3. Open **https://finance.yahoo.com/quote/AMZN** in another browser tab.
-4. Compare the price shown in the app to Yahoo Finance.
+1. Generate a portfolio: $10,000 → Growth Investing → Equal Split.
+2. Note the **Total Portfolio Value** shown (e.g., "$9,998.50").
+3. Click **"New Portfolio"**.
+4. Verify the previous portfolio is still visible on screen while the form appears.
+5. Generate a second portfolio: $15,000 → Index Investing → Equal Split.
+6. After the new portfolio loads, scroll down or look for the **Portfolio History** section.
+7. Find the first portfolio in the history list (labeled with the amount "$10,000" and timestamp).
+8. Click **"Load"** on that entry.
 
 **Expected Result:**
-- The price shown in the app is within a few cents of the current market price on Yahoo Finance.
-- If the market is closed, prices reflect the most recent closing price.
-- Clicking the **stock symbol link** on any card (e.g., "AMZN ↗") opens the Yahoo Finance page for that stock in a new tab.
+- After clicking "New Portfolio" in Step 3, the previous portfolio **remains visible** — it does not disappear.
+- After generating the second portfolio, the first portfolio appears in the **Portfolio History panel** (showing its amount, timestamp, and return %).
+- Clicking "Load" on the history entry **restores** the first portfolio as the active view — the stock cards, KPI values, and trend chart all match what was shown in Step 2.
+- Up to **5 previous portfolios** are stored. Generating a 6th removes the oldest entry.
 
 ---
 
-## Test Case 8 — Weekly Portfolio Trend Chart (5-Day History)
+## Test Case 8 — Market Analytics Tab
 
-**Purpose:** Verify that the portfolio trend chart shows exactly 5 trading days of historical data with correct date alignment across all holdings.
+**Purpose:** Verify the Market Analytics tab displays a complete analytics view of the current portfolio.
 
 **Steps:**
-1. Generate any portfolio (e.g., $15,000, Index Investing).
-2. Scroll to the **Portfolio Summary** section at the bottom of the results.
-3. Look at the **area chart** under the **"Historical performance"** heading.
-4. Hover over each data point in the chart.
+1. Generate any portfolio (e.g., $15,000 → Quality Investing + Value Investing → Equal Split).
+2. After results load, click the **"Market Analytics"** tab at the top of the page.
+3. Review each section of the analytics view.
+4. Hover over slices in the donut chart and bars in the bar chart.
+5. Check the holdings table and find the "Best Movers" and "Worst Movers" panels.
+6. Scroll to the bottom of the analytics view to find the market heatmap.
 
 **Expected Result:**
-- The chart shows **exactly 5 data points**, one per trading day (weekdays only, no weekends).
-- The X-axis labels are dates in the format "May 05", "May 06", etc. representing the last 5 trading days.
-- Hovering over a point shows a tooltip with **"Portfolio Value: $X,XXX.XX"**.
-- The Y-axis range adjusts automatically to the portfolio value range.
-- Repeat the test with **two strategies selected** — the trend values must correctly sum all holdings across both strategies (no date-alignment errors).
+- The analytics tab shows a **donut chart** displaying each stock's % share of the total portfolio — hovering shows the stock symbol and allocation %.
+- A **bar chart** shows each strategy's "Allocated Amount" vs. "Current Value" side by side.
+- A **holdings table** lists all stocks with columns: Symbol, Name, Strategy, Current Price, Shares, Allocation %, Value, Day Change %, and a small sparkline chart.
+- The **Best Movers** panel shows the top 3 stocks with the highest positive intraday change (green).
+- The **Worst Movers** panel shows the bottom 3 stocks with the largest negative intraday change (red).
+- The **market heatmap** at the bottom shows a grid of ~30 stocks color-coded green (up) or red (down) based on their intraday performance.
+- If no portfolio has been created yet, the analytics tab shows a prompt to create one first.
 
 ---
 
-## Test Case 9 — PDF Export
+## Test Case 9 — Live Real-Time Stock Prices
 
-**Purpose:** Verify that the portfolio can be exported as a well-formatted PDF with accurate data matching the screen.
+**Purpose:** Verify prices are fetched live from Yahoo Finance (not cached or static mock data).
+
+**Pre-condition:** Backend server must be running with an active internet connection.
 
 **Steps:**
-1. Generate any portfolio (e.g., $25,000, Quality Investing + Value Investing, Equal Split).
-2. At the top of the results, click the **"Download PDF"** button.
-3. Locate the downloaded file (named `Portfolio_Report_YYYY-MM-DD.pdf`) in your Downloads folder.
-4. Open the PDF.
+1. Generate a portfolio: $10,000 → Growth Investing → default settings.
+2. On the stock cards, note the **current price** displayed for AMZN, TSLA, and GOOGL.
+3. Open **https://finance.yahoo.com/quote/AMZN** in a new browser tab.
+4. Compare the price shown in the app against Yahoo Finance.
 
 **Expected Result:**
-- The PDF downloads automatically and a success toast **"PDF Downloaded!"** appears.
-- It contains a **"Portfolio Summary"** section showing: Initial Investment, Current Value, **Total Return %**, and selected strategies.
-- A **"Portfolio Holdings"** table lists all stocks with columns: Symbol, Name, Strategy, Price, Shares, Allocation, Value, Day Chg%.
-- A **"Weekly Performance Trend"** table at the end shows 5 rows, one per trading day, with portfolio value for each day.
-- All values (prices, shares, totals) match what is displayed on screen.
+- The price shown in the app is within a few cents of the real-time price on Yahoo Finance (small lag is normal; after market hours the most recent close price is shown).
+- If the market is closed, prices reflect the **most recent closing price** (not a stale number from days ago).
+- Clicking the external link icon on any stock card (e.g., clicking **"AMZN ↗"**) opens the Yahoo Finance page for that symbol in a new tab.
 
 ---
 
-## Test Case 10 — Strategy Limit Enforcement (Max 2 Strategies)
+## Test Case 10 — PDF Export
 
-**Purpose:** Verify a user cannot select more than 2 strategies, and deselecting re-enables others.
+**Purpose:** Verify that the portfolio can be exported as a well-formatted PDF with accurate data.
 
 **Steps:**
-1. Enter `10000` → click **Continue**.
-2. Click **"Ethical Investing"** (selected — 1 of 2).
-3. Click **"Growth Investing"** (selected — 2 of 2).
-4. Attempt to click **"Index Investing"** (should be at the limit).
-5. Attempt to click **"Quality Investing"**.
-6. Click **"Ethical Investing"** again to deselect it.
-7. Click **"Index Investing"** now.
+1. Generate a portfolio: $25,000 → Quality Investing + Value Investing → Equal Split.
+2. After results load, click the **"Download PDF"** button at the top of the results section.
+3. Locate the downloaded file in your **Downloads** folder — it will be named `Portfolio_Report_YYYY-MM-DD.pdf`.
+4. Open the PDF and review each section.
 
 **Expected Result:**
-- After selecting 2 strategies, the remaining strategy cards appear **dimmed/disabled** (reduced opacity).
-- Clicking a third strategy displays a red toast: **"Strategy Limit Reached — You can select a maximum of 2 strategies."**
-- Only the 2 originally selected strategies remain highlighted.
-- After deselecting one (Step 6), the previously disabled cards become **re-enabled** and clickable.
-- Selecting a new replacement strategy (Step 7) works correctly and the form can proceed.
+- The PDF downloads automatically and a green toast **"PDF Downloaded!"** appears on screen.
+- The PDF contains a **Portfolio Summary** section with: Initial Investment, Current Value, Total Return %, and the selected strategies.
+- A **Holdings** table lists every stock with Symbol, Name, Strategy, Price, Shares, Allocation %, Value, and Day Change %.
+- A **Weekly Performance Trend** table shows 5 rows (one per trading day) with the portfolio value for each day.
+- All numbers in the PDF (prices, shares, totals) match what is displayed on screen.
 
 ---
 
 ## Summary Table
 
-| # | Test Case | Function Tested | Pass Criteria |
-|---|-----------|-----------------|---------------|
-| 1 | Below $5,000 investment | Frontend + backend input validation | Toast error, no navigation |
-| 2 | Exactly $5,000 investment | Boundary value + share-rounding display | Form advances; value ≈ $5,000; sign correct |
-| 3 | Ethical Investing — single | Strategy mapping | AAPL, ADBE, NSRGY shown |
-| 4 | Index Investing — single | Strategy mapping | VTI, IXUS, ILTB shown |
-| 5 | Two strategies, equal split | Dual strategy + allocation | 50/50 split across 6 stocks |
-| 6 | Two strategies, random split | Random allocation | Different splits each run; sum = investment |
-| 7 | Live stock prices | yfinance API integration | Prices match Yahoo Finance |
-| 8 | Weekly trend chart | 5-day history + date alignment | 5 data points, correct cross-strategy values |
-| 9 | PDF export | Report generation | PDF with all sections; "Total Return" label |
-| 10 | Max 2 strategies enforced | UI validation | 3rd click blocked; deselect re-enables |
+| # | Test Case | Feature Tested | Pass Criteria |
+|---|-----------|----------------|---------------|
+| 1 | Below $5,000 | Input validation | Toast error; form stays on Step 1 |
+| 2 | Exactly $5,000 | Boundary value + share-rounding sign | Form advances; value ≈ $5,000; shows red -0.00% |
+| 3 | Ethical Investing — single strategy | Strategy mapping + live prices | AAPL, ADBE, NSRGY shown with live prices |
+| 4 | Index Investing — single strategy | Strategy mapping + allocation | VTI, IXUS, ILTB with ~33% each |
+| 5 | Two strategies — equal split | Dual-strategy + sign correctness | 50/50 split; correct green/red Total Return |
+| 6 | Two strategies — random split | Random allocation | Different splits each run; sum = investment |
+| 7 | Portfolio History | Save/restore previous portfolios | Portfolio preserved on "New Portfolio"; Load restores it |
+| 8 | Market Analytics Tab | Analytics dashboard | Donut, bar chart, table, movers, heatmap all visible |
+| 9 | Live stock prices | yfinance API integration | Prices match Yahoo Finance within a few cents |
+| 10 | PDF Export | Report generation | PDF downloads with all sections; values match screen |

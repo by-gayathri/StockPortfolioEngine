@@ -191,6 +191,9 @@ def calculate_portfolio_value(investment, stock_allocations, stock_prices):
         shares = round(allocation / price, 2)
         trends = trends_with_dates[stock]
         graph_json = generate_plotly_graph(stock, trends)
+        # Actual current market value: shares purchased × live price.
+        # (allocation / price gives shares rounded to 2 dp, so this is
+        # typically a few cents below the original allocation — correct behaviour.)
         stock_value = round(shares * price, 2)
 
         portfolio[stock] = {
@@ -328,6 +331,48 @@ def portfolio():
             "weekly_trend": weekly_trend,
         }
     )
+
+
+@app.route("/api/refresh-prices", methods=["POST"])
+def refresh_prices():
+    """Re-fetch live prices for an existing portfolio's holdings.
+
+    Request body: { "holdings": [{"symbol": "AAPL", "shares": 9.12}, ...] }
+    Response: { "holdings": [...updated prices/values...], "total_value": float }
+    """
+    try:
+        data = request.get_json(force=True) or {}
+    except Exception:
+        return jsonify({"error": "Invalid JSON"}), 400
+
+    holdings = data.get("holdings", [])
+    if not holdings:
+        return jsonify({"error": "No holdings provided"}), 400
+
+    symbols = [h.get("symbol") for h in holdings if h.get("symbol")]
+    price_map = fetch_stock_prices(symbols)
+
+    refreshed = []
+    for holding in holdings:
+        symbol = holding.get("symbol")
+        shares = float(holding.get("shares", 0))
+        if not symbol:
+            continue
+        price_info = price_map.get(symbol, {})
+        price = price_info.get("price")
+        if price is None:
+            price = 0.0
+        change = round(price_info.get("change", 0.0), 2)
+        value = round(shares * price, 2)
+        refreshed.append({
+            "symbol": symbol,
+            "price": round(price, 2),
+            "change": change,
+            "value": value,
+        })
+
+    total_value = round(sum(r["value"] for r in refreshed), 2)
+    return jsonify({"holdings": refreshed, "total_value": total_value})
 
 
 @app.route("/api/market-ticker", methods=["GET"])
