@@ -1,3 +1,5 @@
+import { calculatePercentChange } from "@/lib/utils";
+
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:5001";
 
@@ -217,6 +219,7 @@ export function generateMockPortfolio(
     price: number;
     change: number;
     allocation: number;
+    allocationAmount: number;
     shares: number;
     value: number;
     strategy: string;
@@ -271,6 +274,7 @@ export function generateMockPortfolio(
       selectedStocks.push({
         ...stock,
         allocation: Math.round((value / amount) * 100),
+        allocationAmount: value,
         shares,
         value,
         strategy: strategyIdToName[s] ?? s,
@@ -300,8 +304,7 @@ export function generateMockPortfolio(
 
   const totalValue =
     Math.round(weeklyTrend[weeklyTrend.length - 1].value * 100) / 100;
-  const totalChange =
-    Math.round(((totalValue - amount) / amount) * 100 * 100) / 100;
+  const totalChange = calculatePercentChange(totalValue, amount);
 
   return {
     stocks: selectedStocks,
@@ -571,6 +574,7 @@ function transformBackendPortfolio(
           price,
           shares,
           allocation: Math.round(allocationRatio * 100), // e.g. 34, 33, 33
+          allocationAmount,
           value,
           change: Math.round(Number(stock.change ?? 0) * 100) / 100,
           weeklyTrend: buildStockTrend(stock, price),
@@ -605,10 +609,7 @@ function transformBackendPortfolio(
   // Compare current portfolio value against the amount invested.
   // This is the most meaningful metric: positive = portfolio is worth MORE than invested,
   // negative = portfolio is worth LESS. (Mock portfolio already uses this formula.)
-  const totalChange =
-    amount > 0
-      ? Math.round(((totalValue - amount) / amount) * 100 * 100) / 100
-      : 0;
+  const totalChange = calculatePercentChange(totalValue, amount);
 
   return {
     stocks,

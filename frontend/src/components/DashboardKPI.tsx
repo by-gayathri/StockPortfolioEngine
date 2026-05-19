@@ -1,4 +1,5 @@
 import { TrendingUp, TrendingDown, Zap, ShieldAlert } from "lucide-react";
+import { formatSignedPercent } from "@/lib/utils";
 
 interface KPIData {
   portfolioValue?: number;
@@ -66,7 +67,12 @@ const DashboardKPI = ({
       : dailyGain != null
         ? dailyGain < 0
         : false;
-  const gainSign = isPositiveReturn ? "+" : isNegativeReturn ? "-" : "";
+  const totalReturnLabel = dailyGain != null
+    ? formatSignedPercent(dailyGain, {
+        currentValue: portfolioValue,
+        baselineValue: investedAmount,
+      })
+    : "0.00%";
 
   const riskNum = riskScore ?? 50;
   const riskColors = getRiskColors(riskNum);
@@ -89,9 +95,7 @@ const DashboardKPI = ({
     },
     {
       label: "Total Return",
-      value: dailyGain != null
-        ? `${gainSign}${Math.abs(dailyGain).toFixed(2)}%`
-        : "0.00%",
+      value: totalReturnLabel,
       sub: isPositiveReturn ? "Portfolio is up" : isNegativeReturn ? "Portfolio is down" : "No change",
       icon: isNegativeReturn ? TrendingDown : TrendingUp,
       color: isNegativeReturn

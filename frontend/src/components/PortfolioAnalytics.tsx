@@ -37,6 +37,7 @@ import {
   Layers,
 } from "lucide-react";
 import { fetchMarketTicker } from "@/lib/portfolioData";
+import { formatSignedPercent } from "@/lib/utils";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -46,6 +47,7 @@ interface Stock {
   price: number;
   shares: number;
   allocation: number;      // % of total portfolio (0-100)
+  allocationAmount?: number; // exact dollars originally allocated to this holding
   value: number;
   change: number;          // intraday % change
   weeklyTrend?: { day: string; price: number }[];
@@ -147,6 +149,10 @@ const PortfolioAnalytics = ({ portfolio }: PortfolioAnalyticsProps) => {
 
   const isPositiveReturn = totalValue >= amount;
   const absoluteReturn = totalValue - amount;
+  const totalReturnLabel = formatSignedPercent(portfolio.totalChange, {
+    currentValue: totalValue,
+    baselineValue: amount,
+  });
 
   /** Allocation data for the donut chart */
   const allocationData = stocks.map((s, i) => ({
@@ -160,8 +166,11 @@ const PortfolioAnalytics = ({ portfolio }: PortfolioAnalyticsProps) => {
   /** Strategy-level aggregation for bar chart */
   const strategyData = strategies.map((strat) => {
     const stratStocks = stocks.filter((s) => s.strategy === strat);
-    const invested = stratStocks.reduce((sum, s) => sum + s.shares * s.price, 0);
-    const allocated = amount / strategies.length; // approximate
+    const invested = stratStocks.reduce((sum, s) => sum + s.value, 0);
+    const allocated = stratStocks.reduce(
+      (sum, s) => sum + (s.allocationAmount ?? s.value),
+      0,
+    );
     return {
       name: strat.replace(" Investing", ""),
       "Current Value": Math.round(invested * 100) / 100,
@@ -206,7 +215,7 @@ const PortfolioAnalytics = ({ portfolio }: PortfolioAnalyticsProps) => {
           },
           {
             label: "Total Return",
-            value: `${totalValue > amount ? "+" : totalValue < amount ? "-" : ""}${Math.abs(portfolio.totalChange).toFixed(2)}%`,
+            value: totalReturnLabel,
             sub: `$${fmt(Math.abs(absoluteReturn))} ${isPositiveReturn ? "gained" : "lost"}`,
             icon: Activity,
             color: isPositiveReturn

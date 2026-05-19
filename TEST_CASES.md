@@ -15,7 +15,7 @@ The $5,000 minimum is enforced at **two layers**:
 
 There is **no maximum** investment limit. All amounts ≥ $5,000 are accepted.
 
-> **Note on share-rounding:** When a portfolio is generated, share quantities are rounded to 2 decimal places. As a result the displayed "Total Portfolio Value" will be a few cents less than the exact investment (e.g. $4,999.94 for a $5,000 investment). This is **correct and expected behavior** — it reflects real-world rounding when buying fractional shares. The "Total Return" indicator correctly shows a red `-0.00%` in this case rather than a misleading green `+0.00%`.
+> **Note on live pricing:** Portfolio holdings are valued using the latest available stock prices. The initial portfolio may be a few cents below the exact investment because shares are rounded to 2 decimal places, but the **Current Value** and **Total Return** will continue to change over time as prices refresh.
 
 ---
 
@@ -78,8 +78,8 @@ Open **http://localhost:8080** in a browser. Both servers must be running for li
 **Expected Result:**
 - A green hint `✓ Valid amount: $5,000` appears below the input (informational only).
 - Clicking Continue with `5000` advances to **Step 2** without an error.
-- After generating, the **Total Portfolio Value** banner shows a value very close to (but possibly a few cents below) **$5,000** — this is correct behavior due to share rounding.
-- The **Total Return** badge shows **red** `-0.00%` (not green), because the current value is slightly below the $5,000 invested.
+- After generating, the **Current Value / Total Portfolio Value** banner shows a value very close to (but possibly a few cents below) **$5,000** because share counts are rounded to 2 decimals.
+- The **Total Return** badge reflects the current live value and may be slightly negative, zero, or positive depending on the latest stock prices.
 
 ---
 
@@ -121,7 +121,7 @@ Open **http://localhost:8080** in a browser. Both servers must be running for li
 
 ## Test Case 5 — Two Strategies with Equal Split
 
-**Purpose:** Verify that selecting two strategies divides the investment exactly 50/50, and that the Total Return sign is correct.
+**Purpose:** Verify that selecting two strategies divides the investment exactly 50/50, and that the Total Return sign and percentage are correct.
 
 **Steps:**
 1. Click **"Create Portfolio"** → enter `10000` → click **"Continue"**.
@@ -136,7 +136,8 @@ Open **http://localhost:8080** in a browser. Both servers must be running for li
 - After generating, two sections appear in results: Growth Investing and Value Investing.
 - **Growth Investing** stocks (AMZN, TSLA, GOOGL) have a combined allocation of exactly **$5,000 (50%)**.
 - **Value Investing** stocks (BRK-B, KO, XOM) have a combined allocation of exactly **$5,000 (50%)**.
-- The **Total Return** badge shows **green** if the current portfolio value exceeds $10,000, and **red** if it is below — reflecting actual market performance, not a rounded percentage quirk.
+- The **Total Return** badge shows **green** if the current portfolio value exceeds $10,000, and **red** if it is below.
+- If the current value is below the initial investment, the badge displays the actual negative percentage, including very small losses, instead of showing `-0.00%`.
 
 ---
 
@@ -160,7 +161,7 @@ Open **http://localhost:8080** in a browser. Both servers must be running for li
 
 ## Test Case 7 — Portfolio History (Save and Reload)
 
-**Purpose:** Verify that previous portfolios are automatically saved and can be reloaded without losing data.
+**Purpose:** Verify that previous portfolios are automatically saved, counted against the 10-slot history limit, and can be reloaded without losing data.
 
 **Steps:**
 1. Generate a portfolio: $10,000 → Growth Investing → Equal Split.
@@ -168,15 +169,21 @@ Open **http://localhost:8080** in a browser. Both servers must be running for li
 3. Click **"New Portfolio"**.
 4. Verify the previous portfolio is still visible on screen while the form appears.
 5. Generate a second portfolio: $15,000 → Index Investing → Equal Split.
-6. After the new portfolio loads, scroll down or look for the **Portfolio History** section.
-7. Find the first portfolio in the history list (labeled with the amount "$10,000" and timestamp).
-8. Click **"Load"** on that entry.
+6. Open **Settings**.
+7. In **Portfolio Data**, verify **Saved Portfolios** shows `1 of 10 slots used`.
+8. Confirm Settings does **not** show the sentence: `"Portfolio history is stored in your browser's local storage and persists across page refreshes."`
+9. After the new portfolio loads, scroll down or look for the **Portfolio History** section.
+10. Find the first portfolio in the history list (labeled with the amount "$10,000" and timestamp).
+11. Click **"Load"** on that entry.
 
 **Expected Result:**
 - After clicking "New Portfolio" in Step 3, the previous portfolio **remains visible** — it does not disappear.
+- The active portfolio and history are persisted in the browser via `localStorage`, so a refresh of the page in the same browser should still show the saved portfolio.
+- The Settings panel shows the current saved-history count using the new 10-slot capacity, for example `1 of 10 slots used`.
+- The removed local-storage explanation sentence is no longer displayed under Settings → Portfolio Data.
 - After generating the second portfolio, the first portfolio appears in the **Portfolio History panel** (showing its amount, timestamp, and return %).
-- Clicking "Load" on the history entry **restores** the first portfolio as the active view — the stock cards, KPI values, and trend chart all match what was shown in Step 2.
-- Up to **5 previous portfolios** are stored. Generating a 6th removes the oldest entry.
+- Clicking "Load" on the history entry **restores** the first portfolio as the active view — the stock cards, KPI values, and trend chart update to match that saved portfolio.
+- Up to **10 previous portfolios** are stored. Generating an 11th previous entry removes the oldest entry.
 
 ---
 
@@ -205,18 +212,20 @@ Open **http://localhost:8080** in a browser. Both servers must be running for li
 
 ## Test Case 9 — Live Real-Time Stock Prices
 
-**Purpose:** Verify prices are fetched live from Yahoo Finance (not cached or static mock data).
+**Purpose:** Verify prices are fetched live from Yahoo Finance and that current value updates when prices refresh.
 
 **Pre-condition:** Backend server must be running with an active internet connection.
 
 **Steps:**
 1. Generate a portfolio: $10,000 → Growth Investing → default settings.
-2. On the stock cards, note the **current price** displayed for AMZN, TSLA, and GOOGL.
-3. Open **https://finance.yahoo.com/quote/AMZN** in a new browser tab.
-4. Compare the price shown in the app against Yahoo Finance.
+2. On the stock cards, note the **current price**, **position value**, and **Total Return** displayed for AMZN, TSLA, and GOOGL.
+3. Click **Refresh** on the portfolio header, or wait for the automatic refresh interval while the dashboard is open.
+4. Open **https://finance.yahoo.com/quote/AMZN** in a new browser tab.
+5. Compare the price shown in the app against Yahoo Finance.
 
 **Expected Result:**
 - The price shown in the app is within a few cents of the real-time price on Yahoo Finance (small lag is normal; after market hours the most recent close price is shown).
+- After a refresh, the **Current Value** and **Total Return** update based on the latest prices and may differ from the original purchase amount.
 - If the market is closed, prices reflect the **most recent closing price** (not a stale number from days ago).
 - Clicking the external link icon on any stock card (e.g., clicking **"AMZN ↗"**) opens the Yahoo Finance page for that symbol in a new tab.
 
@@ -237,7 +246,7 @@ Open **http://localhost:8080** in a browser. Both servers must be running for li
 - The PDF contains a **Portfolio Summary** section with: Initial Investment, Current Value, Total Return %, and the selected strategies.
 - A **Holdings** table lists every stock with Symbol, Name, Strategy, Price, Shares, Allocation %, Value, and Day Change %.
 - A **Weekly Performance Trend** table shows 5 rows (one per trading day) with the portfolio value for each day.
-- All numbers in the PDF (prices, shares, totals) match what is displayed on screen.
+- All numbers in the PDF (prices, shares, totals) match the live portfolio values shown on screen at the moment of export.
 
 ---
 
@@ -246,12 +255,12 @@ Open **http://localhost:8080** in a browser. Both servers must be running for li
 | # | Test Case | Feature Tested | Pass Criteria |
 |---|-----------|----------------|---------------|
 | 1 | Below $5,000 | Input validation | Toast error; form stays on Step 1 |
-| 2 | Exactly $5,000 | Boundary value + share-rounding sign | Form advances; value ≈ $5,000; shows red -0.00% |
+| 2 | Exactly $5,000 | Boundary value + live valuation | Form advances; initial value ≈ $5,000; refresh changes current value and return % |
 | 3 | Ethical Investing — single strategy | Strategy mapping + live prices | AAPL, ADBE, NSRGY shown with live prices |
 | 4 | Index Investing — single strategy | Strategy mapping + allocation | VTI, IXUS, ILTB with ~33% each |
-| 5 | Two strategies — equal split | Dual-strategy + sign correctness | 50/50 split; correct green/red Total Return |
+| 5 | Two strategies — equal split | Dual-strategy + return correctness | 50/50 split; correct green/red Total Return; small losses do not display as `-0.00%` |
 | 6 | Two strategies — random split | Random allocation | Different splits each run; sum = investment |
-| 7 | Portfolio History | Save/restore previous portfolios | Portfolio preserved on "New Portfolio"; Load restores it |
+| 7 | Portfolio History | Save/restore previous portfolios | Portfolio preserved on "New Portfolio"; Settings shows 10-slot count; Load restores it |
 | 8 | Market Analytics Tab | Analytics dashboard | Donut, bar chart, table, movers, heatmap all visible |
 | 9 | Live stock prices | yfinance API integration | Prices match Yahoo Finance within a few cents |
 | 10 | PDF Export | Report generation | PDF downloads with all sections; values match screen |

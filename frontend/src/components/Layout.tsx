@@ -69,7 +69,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "Is my portfolio history saved if I refresh the page?",
-    a: "Yes! Your last 5 portfolios are automatically saved to your browser's local storage and will be available even after a page refresh.",
+    a: "Yes! Your last 10 portfolios are automatically saved to your browser's local storage and will be available even after a page refresh.",
   },
   {
     q: "How do I export my portfolio?",
@@ -198,7 +198,7 @@ const SettingsPanel = ({
                     Saved Portfolios
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {historyCount} of 5 slots used
+                    {historyCount} of 10 slots used
                   </p>
                 </div>
                 <span className="text-sm font-bold text-primary">
@@ -209,14 +209,9 @@ const SettingsPanel = ({
               <div className="w-full bg-white/5 rounded-full h-1.5">
                 <div
                   className="bg-primary rounded-full h-1.5 transition-all"
-                  style={{ width: `${(historyCount / 5) * 100}%` }}
+                  style={{ width: `${Math.min(historyCount / 10, 1) * 100}%` }}
                 />
               </div>
-
-              <p className="text-xs text-muted-foreground">
-                Portfolio history is stored in your browser's local storage and
-                persists across page refreshes.
-              </p>
 
               {historyCount > 0 && (
                 <AlertDialog>

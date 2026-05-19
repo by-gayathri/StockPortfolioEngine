@@ -1,5 +1,6 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { formatSignedPercent } from "@/lib/utils";
 
 interface Stock {
   symbol: string;
@@ -65,6 +66,10 @@ export function generatePortfolioPDF(data: PortfolioData): void {
   doc.setTextColor(80, 80, 80);
   
   const summaryY = 61;
+  const totalReturnLabel = formatSignedPercent(totalChange, {
+    currentValue: totalValue,
+    baselineValue: amount,
+  });
   doc.text("Initial Investment:", 14, summaryY);
   doc.setTextColor(30, 30, 30);
   doc.setFont(undefined, "bold");
@@ -80,10 +85,10 @@ export function generatePortfolioPDF(data: PortfolioData): void {
   doc.setFont(undefined, "normal");
   doc.setTextColor(80, 80, 80);
   doc.text("Weekly Change:", 14, summaryY + 10);
-  const changeColor = totalChange >= 0 ? [34, 197, 94] : [239, 68, 68]; // Green or Red
+  const changeColor = totalValue >= amount ? [34, 197, 94] : [239, 68, 68]; // Green or Red
   doc.setTextColor(changeColor[0], changeColor[1], changeColor[2]);
   doc.setFont(undefined, "bold");
-  doc.text(`${totalChange >= 0 ? "+" : ""}${totalChange.toFixed(2)}%`, 60, summaryY + 10);
+  doc.text(totalReturnLabel, 60, summaryY + 10);
   
   doc.setFont(undefined, "normal");
   doc.setTextColor(80, 80, 80);
@@ -246,7 +251,10 @@ Generated: ${new Date().toLocaleDateString("en-US", {
 💰 PORTFOLIO SUMMARY
 • Initial Investment: $${amount.toLocaleString()}
 • Current Value: $${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-• Weekly Change: ${totalChange >= 0 ? "+" : ""}${totalChange.toFixed(2)}%
+• Weekly Change: ${formatSignedPercent(totalChange, {
+  currentValue: totalValue,
+  baselineValue: amount,
+})}
 
 🎯 SELECTED STRATEGIES
 ${strategies.map((s, i) => `  ${i + 1}. ${s}`).join("\n")}

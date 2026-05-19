@@ -20,6 +20,7 @@ import Recommendations from "@/components/Recommendations";
 import PortfolioAnalytics from "@/components/PortfolioAnalytics";
 import WelcomeModal from "@/components/WelcomeModal";
 import { fetchPortfolio, generateMockPortfolio, refreshPortfolioPrices } from "@/lib/portfolioData";
+import { calculatePercentChange, formatSignedPercent } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -34,7 +35,7 @@ type PortfolioEntry = {
   createdAt: string; // ISO timestamp
 };
 
-const MAX_HISTORY = 5;
+const MAX_HISTORY = 10;
 
 // ─── Risk Score ───────────────────────────────────────────────────────────────
 // Risk is assessed per strategy based on volatility profile and asset class.
@@ -92,7 +93,7 @@ const Index = () => {
     }
   });
 
-  // Ring buffer of previous portfolios (newest first, max 5) — persisted in localStorage
+  // Ring buffer of previous portfolios (newest first, max 10) — persisted in localStorage
   const [portfolioHistory, setPortfolioHistory] = useState<PortfolioEntry[]>(() => {
     try {
       const saved = localStorage.getItem("portfolioHistory");
@@ -160,11 +161,7 @@ const Index = () => {
           updatedStocks.reduce((sum, stock) => sum + (stock.value ?? 0), 0) * 100,
         ) / 100;
 
-      const totalChange =
-        sourcePortfolio.amount > 0
-          ? Math.round(((totalValue - sourcePortfolio.amount) / sourcePortfolio.amount) * 100 * 100) /
-            100
-          : 0;
+      const totalChange = calculatePercentChange(totalValue, sourcePortfolio.amount);
 
       const updatedPortfolio: PortfolioEntry = {
         ...sourcePortfolio,
@@ -731,8 +728,10 @@ const PortfolioHistoryPanel = ({
                     <TrendingDown className="w-3 h-3" />
                   )}
                   <span>
-                    {entry.totalValue > entry.amount ? "+" : entry.totalValue < entry.amount ? "-" : ""}
-                    {Math.abs(entry.totalChange).toFixed(2)}%
+                    {formatSignedPercent(entry.totalChange, {
+                      currentValue: entry.totalValue,
+                      baselineValue: entry.amount,
+                    })}
                   </span>
                 </div>
               </div>

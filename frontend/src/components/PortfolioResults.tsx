@@ -30,12 +30,14 @@ import {
 	shareViaEmail,
 	copyToClipboard,
 } from "@/lib/portfolioExport";
+import { formatSignedPercent } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
 interface Stock {
 	symbol: string;
 	name: string;
 	allocation: number;
+	allocationAmount?: number;
 	price: number;
 	shares: number;
 	value: number;
@@ -141,7 +143,14 @@ const PortfolioResults = ({
 			? byName
 			: stocksWithTrends.slice(fallbackStart, fallbackEnd);
 
-		return collection.reduce((sum, stock) => sum + (stock.value ?? 0), 0);
+		return collection.reduce(
+			(sum, stock) => sum + (stock.allocationAmount ?? stock.value ?? 0),
+			0
+		);
+	});
+	const totalReturnLabel = formatSignedPercent(totalChange, {
+		currentValue: totalValue,
+		baselineValue: amount,
 	});
 
 	// Chart color follows portfolio direction — green if up, red if down
@@ -190,8 +199,7 @@ const PortfolioResults = ({
 									<TrendingDown className="w-6 h-6" />
 								) : null}
 								<span className="text-2xl font-bold">
-									{totalValue > amount ? "+" : totalValue < amount ? "-" : ""}
-									{Math.abs(totalChange).toFixed(2)}%
+									{totalReturnLabel}
 								</span>
 							</div>
 							<span className="text-xs text-primary-foreground/60 font-normal">vs. invested amount</span>
@@ -347,8 +355,7 @@ const PortfolioResults = ({
 							) : totalValue < amount ? (
 								<TrendingDown className="w-6 h-6" />
 							) : null}
-							{totalValue > amount ? "+" : totalValue < amount ? "-" : ""}
-							{Math.abs(totalChange).toFixed(2)}%
+							{totalReturnLabel}
 						</p>
 					</div>
 				</div>
