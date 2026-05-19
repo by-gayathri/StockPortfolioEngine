@@ -123,9 +123,10 @@ type BackendPortfolioStock = {
   allocation_percentage?: number;
   price?: number | string | null;
   shares?: number;
+  value?: number;
   graph?: string | null;
   dates?: string[];
-  prices?: number[];
+  prices?: (number | null)[];
   change?: number;
 };
 
@@ -196,8 +197,10 @@ export async function fetchMarketTicker(): Promise<
 }
 
 export async function refreshPortfolioPrices(
-  holdings: { symbol: string; shares: number }[],
-): Promise<{ symbol: string; price: number; change: number; value: number }[]> {
+  holdings: { symbol: string; shares: number; price?: number }[],
+): Promise<
+  { symbol: string; price: number; change: number; value: number; stale?: boolean }[]
+> {
   const response = await fetch(`${API_BASE_URL}/api/refresh-prices`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -205,7 +208,13 @@ export async function refreshPortfolioPrices(
   });
   if (!response.ok) throw new Error(`Refresh failed: ${response.statusText}`);
   const data = await response.json();
-  return data.holdings as { symbol: string; price: number; change: number; value: number }[];
+  return data.holdings as {
+    symbol: string;
+    price: number;
+    change: number;
+    value: number;
+    stale?: boolean;
+  }[];
 }
 
 export function generateMockPortfolio(
@@ -555,9 +564,15 @@ function transformBackendPortfolio(
                 : 0) * 100,
           ) / 100;
 
+        const backendValue = Number(stock.value);
         const value =
-          Math.round((price > 0 ? shares * price : allocationAmount) * 100) /
-          100;
+          Math.round(
+            (Number.isFinite(backendValue) && backendValue > 0
+              ? backendValue
+              : price > 0
+                ? shares * price
+                : allocationAmount) * 100,
+          ) / 100;
 
         // ✅ Use backend allocation_percentage (predefined ratios within strategy)
         // If it's missing, fall back to share of total portfolio.
