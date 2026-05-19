@@ -144,7 +144,7 @@ const PortfolioResults = ({
 			: stocksWithTrends.slice(fallbackStart, fallbackEnd);
 
 		return collection.reduce(
-			(sum, stock) => sum + (stock.allocationAmount ?? stock.value ?? 0),
+			(sum, stock) => sum + (stock.value ?? stock.allocationAmount ?? 0),
 			0
 		);
 	});

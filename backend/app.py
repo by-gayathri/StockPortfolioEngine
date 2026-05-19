@@ -1,4 +1,5 @@
 import json
+import math
 import os
 import random
 from datetime import datetime, timedelta
@@ -23,41 +24,157 @@ STRATEGIES = {
 }
 
 
+def _positive_float(value):
+    """Return a finite positive float, otherwise None."""
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+
+    if not math.isfinite(number) or number <= 0:
+        return None
+    return number
+
+
+def _fast_info_value(fast_info, *keys):
+    """Safely read yfinance fast_info keys without letting one missing key fail."""
+    for key in keys:
+        try:
+            value = fast_info.get(key)
+        except Exception:
+            value = None
+        if value is None:
+            try:
+                value = getattr(fast_info, key)
+            except Exception:
+                value = None
+
+        number = _positive_float(value)
+        if number is not None:
+            return number
+    return None
+
+
+def _history_price_snapshot(ticker):
+    """Fallback quote snapshot from Yahoo historical prices."""
+    price = None
+    previous_close = None
+
+    try:
+        intraday = ticker.history(period="5d", interval="1m")
+    except Exception:
+        intraday = None
+
+    if intraday is not None and not intraday.empty and "Close" in intraday:
+        closes = intraday["Close"].dropna()
+        if not closes.empty:
+            price = _positive_float(closes.iloc[-1])
+
+    try:
+        daily = ticker.history(period="5d", interval="1d")
+    except Exception:
+        daily = None
+
+    if daily is not None and not daily.empty and "Close" in daily:
+        closes = daily["Close"].dropna()
+        if not closes.empty:
+            price = price or _positive_float(closes.iloc[-1])
+            if len(closes) > 1:
+                previous_close = _positive_float(closes.iloc[-2])
+
+    return price, previous_close
+
+
+def _latest_trend_price(trend):
+    prices = trend.get("prices") or []
+    for price in reversed(prices):
+        number = _positive_float(price)
+        if number is not None:
+            return number
+    return None
+
+
+def fetch_stock_quote(stock):
+    """Fetch one current quote from Yahoo Finance with defensive fallbacks."""
+    try:
+        ticker = yf.Ticker(stock)
+        fast_info = ticker.fast_info
+
+        price = _fast_info_value(
+            fast_info,
+            "lastPrice",
+            "last_price",
+            "regularMarketPrice",
+            "currentPrice",
+        )
+        previous_close = _fast_info_value(
+            fast_info,
+            "regularMarketPreviousClose",
+            "previousClose",
+            "previous_close",
+        )
+
+        if price is None or previous_close is None:
+            history_price, history_previous_close = _history_price_snapshot(ticker)
+            price = price or history_price
+            previous_close = previous_close or history_previous_close
+
+        change_pct = 0.0
+        if price is not None and previous_close is not None:
+            change_pct = round((price - previous_close) / previous_close * 100, 2)
+
+        return {
+            "price": round(price, 2) if price is not None else None,
+            "change": change_pct,
+        }
+    except Exception as exc:
+        app.logger.warning("Failed to fetch Yahoo quote for %s: %s", stock, exc)
+        return {"price": None, "change": 0.0}
+
+
 def fetch_stock_prices(stocks):
-    """Fetch latest prices and intraday % change."""
+    """Fetch latest Yahoo prices and day % change for each symbol."""
     prices = {}
     for stock in stocks:
-        ticker = yf.Ticker(stock)
-        info = ticker.history(period="1d")
-        if not info.empty:
-            close_price = round(info["Close"].iloc[-1], 2)
-            open_price = info["Open"].iloc[-1]
-            # Return percentage change so frontend can display it with a "%" suffix
-            change_pct = round((close_price - open_price) / open_price * 100, 2) if open_price > 0 else 0.0
-            prices[stock] = {"price": close_price, "change": change_pct}
-        else:
-            prices[stock] = {"price": None, "change": 0.0}
+        prices[stock] = fetch_stock_quote(stock)
     return prices
 
 
-def fetch_weekly_trends_with_dates(stocks):
+def fetch_weekly_trends_with_dates(stocks, latest_prices=None):
     """Fetch weekly trend data (5 trading days) for each stock with unified date range."""
+    latest_prices = latest_prices or {}
     trends = {}
     all_dates_set = set()
     stock_data = {}
     
     # First pass: collect all data and find common date range
     for stock in stocks:
-        ticker = yf.Ticker(stock)
-        history = ticker.history(period="5d")
+        try:
+            ticker = yf.Ticker(stock)
+            history = ticker.history(period="5d", interval="1d")
+        except Exception as exc:
+            app.logger.warning("Failed to fetch Yahoo trend for %s: %s", stock, exc)
+            history = None
         
-        if not history.empty:
+        if history is not None and not history.empty:
             dates = history.index.strftime("%Y-%m-%d").tolist()
             prices = list(history["Close"].values)
+            live_price = _positive_float(latest_prices.get(stock, {}).get("price"))
+            if live_price is not None and prices:
+                prices[-1] = live_price
+            elif live_price is not None:
+                dates = [datetime.today().strftime("%Y-%m-%d")]
+                prices = [live_price]
             stock_data[stock] = {"dates": dates, "prices": prices}
             all_dates_set.update(dates)
         else:
-            stock_data[stock] = {"dates": [], "prices": []}
+            live_price = _positive_float(latest_prices.get(stock, {}).get("price"))
+            if live_price is not None:
+                today = datetime.today().strftime("%Y-%m-%d")
+                stock_data[stock] = {"dates": [today], "prices": [live_price]}
+                all_dates_set.add(today)
+            else:
+                stock_data[stock] = {"dates": [], "prices": []}
     
     # Determine unified date range (last 5 trading days available across all stocks)
     if all_dates_set:
@@ -168,28 +285,35 @@ def calculate_portfolio_value(investment, stock_allocations, stock_prices):
     portfolio = {}
     total_value = 0
 
-    trends_with_dates = fetch_weekly_trends_with_dates(stock_allocations.keys())
+    trends_with_dates = fetch_weekly_trends_with_dates(
+        stock_allocations.keys(),
+        stock_prices,
+    )
 
     for stock, ratio in stock_allocations.items():
         allocation = round(investment * ratio, 2)
         price_info = stock_prices.get(stock, {})
         price = price_info.get("price")
+        trends = trends_with_dates.get(stock, {"dates": [], "prices": []})
+
+        if price is None:
+            price = _latest_trend_price(trends)
 
         if price is None:
             portfolio[stock] = {
                 "allocation": allocation,
                 "price": None,
                 "shares": 0,
+                "value": 0,
                 "graph": None,
                 "allocation_percentage": round(ratio, 2),
-                "dates": trends_with_dates[stock]["dates"],
-                "prices": trends_with_dates[stock]["prices"],
+                "dates": trends["dates"],
+                "prices": trends["prices"],
                 "change": round(price_info.get("change", 0), 2),
             }
             continue
 
         shares = round(allocation / price, 2)
-        trends = trends_with_dates[stock]
         graph_json = generate_plotly_graph(stock, trends)
         # Actual current market value: shares purchased × live price.
         # (allocation / price gives shares rounded to 2 dp, so this is
@@ -201,6 +325,7 @@ def calculate_portfolio_value(investment, stock_allocations, stock_prices):
             "allocation_percentage": round(ratio, 2),
             "price": round(price, 2),
             "shares": shares,
+            "value": stock_value,
             "graph": graph_json,
             "dates": trends["dates"],
             "prices": trends["prices"],
@@ -355,13 +480,15 @@ def refresh_prices():
     refreshed = []
     for holding in holdings:
         symbol = holding.get("symbol")
-        shares = float(holding.get("shares", 0))
+        shares = _positive_float(holding.get("shares")) or 0.0
         if not symbol:
             continue
         price_info = price_map.get(symbol, {})
         price = price_info.get("price")
+        stale = False
         if price is None:
-            price = 0.0
+            price = _positive_float(holding.get("price")) or 0.0
+            stale = True
         change = round(price_info.get("change", 0.0), 2)
         value = round(shares * price, 2)
         refreshed.append({
@@ -369,6 +496,7 @@ def refresh_prices():
             "price": round(price, 2),
             "change": change,
             "value": value,
+            "stale": stale,
         })
 
     total_value = round(sum(r["value"] for r in refreshed), 2)
@@ -498,4 +626,3 @@ if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5001))
     debug = os.environ.get("FLASK_DEBUG", "false").lower() == "true"
     app.run(host="0.0.0.0", port=port, debug=debug)
-

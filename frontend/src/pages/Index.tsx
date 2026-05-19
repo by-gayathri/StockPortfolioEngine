@@ -69,6 +69,34 @@ function formatTimestamp(iso: string): string {
   }
 }
 
+function replaceLastStockTrendPrice(
+  trend: { day: string; price: number }[] | undefined,
+  price: number,
+) {
+  if (!trend?.length || !Number.isFinite(price) || price <= 0) return trend;
+
+  const nextTrend = trend.map((point) => ({ ...point }));
+  nextTrend[nextTrend.length - 1] = {
+    ...nextTrend[nextTrend.length - 1],
+    price: Math.round(price * 100) / 100,
+  };
+  return nextTrend;
+}
+
+function replaceLastPortfolioTrendValue(
+  trend: { day: string; value: number }[] | undefined,
+  value: number,
+) {
+  if (!trend?.length || !Number.isFinite(value) || value <= 0) return trend;
+
+  const nextTrend = trend.map((point) => ({ ...point }));
+  nextTrend[nextTrend.length - 1] = {
+    ...nextTrend[nextTrend.length - 1],
+    value: Math.round(value * 100) / 100,
+  };
+  return nextTrend;
+}
+
 // ─── Component ───────────────────────────────────────────────────────────────
 
 const Index = () => {
@@ -137,6 +165,7 @@ const Index = () => {
         sourcePortfolio.stocks.map((stock) => ({
           symbol: stock.symbol,
           shares: stock.shares,
+          price: stock.price,
         })),
       );
 
@@ -153,6 +182,10 @@ const Index = () => {
           price: fresh.price,
           value: fresh.value,
           change: fresh.change,
+          weeklyTrend: replaceLastStockTrendPrice(
+            stock.weeklyTrend,
+            fresh.price,
+          ),
         };
       });
 
@@ -166,6 +199,9 @@ const Index = () => {
       const updatedPortfolio: PortfolioEntry = {
         ...sourcePortfolio,
         stocks: updatedStocks,
+        weeklyTrend:
+          replaceLastPortfolioTrendValue(sourcePortfolio.weeklyTrend, totalValue) ??
+          sourcePortfolio.weeklyTrend,
         totalValue,
         totalChange,
       };
